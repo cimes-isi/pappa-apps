@@ -10,6 +10,7 @@ CLINK = -L$(HALIDE_LIBDIR) -ldl -lpthread
 CXXLINK = -L$(HALIDE_LIBDIR) -lHalide
 
 TARGET=host-x86-64
+#TARGET=$(TARGET)-profile
 MACHINE_PARAMS=32,16777216,40
 
 # to use manually defined scheduler in twoel_gen.cpp, leave AUTOSCHEDULER commented.
@@ -36,11 +37,12 @@ scf.x:  $(OBJFILES)
 run: scf.x
 	./scf.x
 
-trace scf.trace: scf.x
+trace scf.trace: scf.x be.inpt
+	rm -f scf.trace
 	HL_TRACE_FILE=scf.trace ./scf.x
 
 pictures: scf.trace
-	../../halide/bin/HalideTraceDump -i scf.trace -t png
+	../../halide/build/bin/HalideTraceDump -i scf.trace -t png
 
 VIDEO_WIDTH=500
 VIDEO_HEIGHT=400
