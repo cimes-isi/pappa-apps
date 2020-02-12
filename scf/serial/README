@@ -1,0 +1,57 @@
+1) To compile the program, type "make".
+   a) The following arguments can be passed to make to selectively enable
+      various optimizations:
+        NO_PRECALC=1      Disable using a lookup table in g
+        USE_CACHE=1       Enable caching results of g (conventional method)
+        NO_BOOKKEEPING=1  Disables updating computed and work skipped counters
+        BLAS=1            Enables BLAS
+        LAPACKE=1         Enables LAPACK
+    
+    b) BLAS support
+       cblas.h file and BLAS library must be installed to use BLAS functions.
+    
+    c) LAPACK support
+       The LAPACKE C language wrapper must be installed in addition to the
+       LAPACK library itself.
+
+2) To run the program, type "scf.x".
+
+3) The programs input file is be.input.
+
+4) The following optimizations have been included
+
+   a) The 2*pow(pi, 2.50) calculation in g has been replaced with a constant.
+   
+   b) In function g, the division by expntIJ and expntKL operations has been
+      replaced with a multiplication of their inverse.
+
+   c) All arrays are single dimensional with calculated offsets to eliminate
+      extra pointer indirection.
+
+   d) contract_matricies has be modified to use a single loop which iterates
+      to nbfn*nbfn and uses pointer incrementing.
+
+   e) oneel has been removed from the main iteration loop; instead, the initial
+      g_fock matrix is stored during initialization then copied into g_fock
+      each iteration. After copying, contract_matricies is performed to
+      calculate the one-electron energy contribution.
+
+   f) There is symmetry in g that can be exploited to cut the number of times is it called to approximately
+      1/8th. The function calculates the same value when: i and j are swapped, k and l are swapped, i,j and
+      k,l are swapped, as well as any combination of those three swap operations.
+
+   g) The calculations in g which only rely on one of the i,j or k,l input
+      pairs are precomputed and stored in a lookup table. Implemented in
+      g_fast. g_fast is used unless NO_PRECALC=1 is passed to make, in which
+      case the standard g function is used.
+
+   h) g and g_fast are inlined functions declared in g.h
+
+   i) The i,j and k,l arguments to g_fast have been replaced with the computed
+      ij or kl offset into the table. 
+
+   j) LAPACK functions can be used to find the eigenvalues of a matrix.
+      (Requires LAPACKE=1 option to make)
+   
+   k) BLAS functions can be used for the matrix multiplications and
+      vector operations. (Requires BLAS=1 option to make)
