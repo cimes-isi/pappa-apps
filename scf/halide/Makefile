@@ -14,9 +14,9 @@ TARGET=host-x86-64
 MACHINE_PARAMS=32,16777216,40
 
 # to use manually defined scheduler in twoel_gen.cpp, leave AUTOSCHEDULER commented.
-AUTOSCHEDULER=Mullapudi2016
+#AUTOSCHEDULER=Mullapudi2016
 #AUTOSCHEDULER=Li2018
-#AUTOSCHEDULER=Adams2019
+AUTOSCHEDULER=Adams2019
 
 ifneq ($(AUTOSCHEDULER),)
 SCHEDLIB=../../halide/build/lib/libauto_schedule.so

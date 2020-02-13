@@ -36,6 +36,7 @@ void damp(double fac);
 double dendif(void);
 double diagon(int);
 void makeob(void);
+void mkpre(void);
 void denges(void);
 void setarrays(void);
 void closearrays(void);
@@ -45,6 +46,7 @@ double enrep, q[maxatom], ax[maxatom], ay[maxatom], az[maxatom];
 Halide::Runtime::Buffer<double, 1> x_buf, y_buf, z_buf, expnt_buf, rnorm_buf, g_schwarz_max_j_buf;
 double *x, *y, *z, *expnt, *rnorm, *g_schwarz_max_j;
 Halide::Runtime::Buffer<double, 2> g_dens_buf, g_fock_double_buf[2], *g_fock_buf, *g_fock_out_buf, g_schwarz_buf;
+Halide::Runtime::Buffer<double, 3> g_precalc_buf;
 double ** g_dens, ** g_fock, **g_fock_out, ** g_schwarz, ** g_tfock, ** g_work, ** g_ident, ** g_orbs, * eigv;
 
 int iky[maxnbfn], nocc, nbfn;
@@ -64,6 +66,7 @@ int main(int argc, char **argv) {
 // create and allocate global arrays;
   setarrays();
   ininrm();
+  mkpre();
 
 // create initial guess for density matrix by using single atom densities;
   denges();
@@ -87,7 +90,7 @@ int main(int argc, char **argv) {
         Halide::Runtime::Buffer<double> etwo_buffer = Halide::Runtime::Buffer<double>::make_scalar();
         extern double rdelta, delta, delo2; // integ.c
         extern Halide::Runtime::Buffer<double> fm; // integ.c
-        int error = twoel(delo2, delta, rdelta, expnt_buf, rnorm_buf, x_buf, y_buf, z_buf, fm_buf, *g_fock_buf, g_dens_buf, etwo_buffer, *g_fock_out_buf);
+        int error = twoel(delo2, delta, rdelta, fm_buf, *g_fock_buf, g_dens_buf, g_precalc_buf, etwo_buffer, *g_fock_out_buf);
         assert(!error);
         swap_g_fock();
 #ifdef TRACING
@@ -463,6 +466,7 @@ void setarrays(void) {
   g_schwarz_buf = Halide::Runtime::Buffer<double>(nbfn, nbfn);
   g_fock_double_buf[0] = Halide::Runtime::Buffer<double>(nbfn, nbfn);
   g_fock_double_buf[1] = Halide::Runtime::Buffer<double>(nbfn, nbfn);
+  g_precalc_buf = Halide::Runtime::Buffer<double>(nbfn, nbfn, nbfn);
   g_dens    = (double **) malloc(nbfn * sizeof(double *));
   g_schwarz = (double **) malloc(nbfn * sizeof(double *));
   g_fock    = (double **) malloc(nbfn * sizeof(double *));
@@ -508,6 +512,37 @@ void setarrays(void) {
       g_orbs [i][j]   = 0.0;
 } } }
 
+void mkpre(void) {
+  int i, j;
+  for (j = 0; j < nbfn; j++) {
+    for (i = 0; i < nbfn; i++) {
+      double dx = x[i] - x[j];
+      double dy = y[i] - y[j];
+      double dz = z[i] - z[j];
+
+      double expntIJ = expnt[i] + expnt[j];
+
+      double r2 = dx * dx + dy * dy + dz * dz;
+      double fac  = expnt[i] * expnt[j] / expntIJ;
+
+      /* facr2 */
+      g_precalc_buf(i,j,0) = exp(-fac * r2);
+      /* expnt */
+      g_precalc_buf(i,j,1) = expntIJ;
+
+      /* x */
+      g_precalc_buf(i,j,2) = (x[i] * expnt[i] + x[j] * expnt[j]) / expntIJ;
+      /* y */
+      g_precalc_buf(i,j,3) = (y[i] * expnt[i] + y[j] * expnt[j]) / expntIJ;
+      /* z */
+      g_precalc_buf(i,j,4) = (z[i] * expnt[i] + z[j] * expnt[j]) / expntIJ;
+
+      /* rnorm */
+      g_precalc_buf(i,j,5) = rnorm[i] * rnorm[j];
+    }
+  }
+}
+
 void swap_g_fock(void) {
     Halide::Runtime::Buffer<double, 2> *tmp_buf = g_fock_buf;
     g_fock_buf = g_fock_out_buf;
@@ -529,6 +564,7 @@ void closearrays(void) {
   g_fock_double_buf[0].~Buffer();
   g_fock_double_buf[1].~Buffer();
   g_schwarz_max_j_buf.~Buffer();
+  g_precalc_buf.~Buffer();
   g_fock = NULL;
   g_fock_out = NULL;
 
