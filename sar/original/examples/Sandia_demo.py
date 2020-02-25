@@ -7,8 +7,12 @@
 ##############################################################################
 
 #Add include directories to default path list
-from sys import path
-path.append('../')
+import sys
+sys.path.append('../')
+if len(sys.argv) > 1 and sys.argv[1] == '--batch':
+    batch = True
+else:
+    batch = False
 
 import matplotlib.pylab as plt
 
@@ -36,4 +40,7 @@ img_pf = imgTools.polar_format(phs_corr, platform, img_plane, taylor = 30)
 
 #Output image
 imgTools.imshow(img_pf, [-45,0])
-plt.show()
+if batch:
+    plt.savefig("Sandia_demo.png")
+else:
+    plt.show()

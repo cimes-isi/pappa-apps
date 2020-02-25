@@ -7,9 +7,13 @@
 ##############################################################################
 
 #Add include directories to default path list
-from sys import path
-path.append('../')
-path.append('./dictionaries')
+import sys
+sys.path.append('../')
+sys.path.append('./dictionaries')
+if len(sys.argv) > 1 and sys.argv[1] == '--batch':
+    batch = True
+else:
+    batch = False
 
 #Include Dictionaries
 from SARplatform import plat_dict
@@ -104,7 +108,10 @@ plt.title('Digital Spotlight Backprojection')
 imgTools.imshow(img_DSBP, dB_scale = [-25,0], extent = extent)
 plt.xlabel('meters'); plt.ylabel('meters')
 plt.tight_layout()
-plt.show()
+if batch:
+    plt.savefig("DSBP_demo.png")
+else:
+    plt.show()
 '''
 #DIRSIG DSBP demo
 ###############################################################################

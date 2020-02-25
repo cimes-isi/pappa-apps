@@ -7,9 +7,13 @@
 ##############################################################################
 
 #Add include directories to default path list
-from sys import path
-path.append('../')
-path.append('./dictionaries')
+import sys
+sys.path.append('../')
+sys.path.append('./dictionaries')
+if len(sys.argv) > 1 and sys.argv[1] == '--batch':
+    batch = True
+else:
+    batch = False
 
 #Include Dictionaries
 from SARplatform import plat_dict
@@ -135,7 +139,10 @@ if __name__ == '__main__':
     imgTools.imshow(img_FFBP, dB_scale = [-30,0], extent = extent)
     plt.xlabel('meters'); plt.ylabel('meters')
     plt.tight_layout()
-    plt.show()
+    if batch:
+        plt.savefig("FFBPmp_demo.png")
+    else:
+        plt.show()
 
     '''
     #DIRSIG DSBP demo

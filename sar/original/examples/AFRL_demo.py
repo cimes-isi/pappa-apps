@@ -7,8 +7,12 @@
 ##############################################################################
 
 #Add include directories to default path list
-from sys import path
-path.append('../')
+import sys
+sys.path.append('../')
+if len(sys.argv) > 1 and sys.argv[1] == '--batch':
+    batch = True
+else:
+    batch = False
 
 #Include standard library dependencies
 import matplotlib.pylab as plt
@@ -36,4 +40,7 @@ img_bp = imgTools.backprojection(phs, platform, img_plane, taylor = 20, upsample
 #Output image
 imgTools.imshow(img_bp, dB_scale = [-30,0])
 plt.title('Backprojection')
-plt.show()
+if batch:
+    plt.savefig("AFRL_demo.png")
+else:
+    plt.show()

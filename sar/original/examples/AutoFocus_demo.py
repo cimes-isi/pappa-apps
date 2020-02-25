@@ -11,8 +11,12 @@
 ##############################################################################
 
 #Add include directories to default path list
-from sys import path
-path.append('../')
+import sys
+sys.path.append('../')
+if len(sys.argv) > 1 and sys.argv[1] == '--batch':
+    batch = True
+else:
+    batch = False
 
 #Include standard library dependencies
 import numpy as np
@@ -65,4 +69,7 @@ plt.ylabel('Phase (radians)')
 #Output image
 plt.figure()
 imgTools.imshow(img_af, dB_scale = [-45,0])
-plt.show()
+if batch:
+    plt.savefig("AutoFocus_demo.png")
+else:
+    plt.show()
