@@ -184,4 +184,5 @@ def decimate(x, q, n=None, axis=-1, beta = None, cutoff = 'nyq'):
 
     sl = [slice(None)] * y.ndim
     sl[axis] = slice(None, None, q)
+    sl = tuple(sl)
     return y[sl]
