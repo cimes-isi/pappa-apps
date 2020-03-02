@@ -14,9 +14,14 @@ double contract_matrices(double *, double *);
 
 
 #define OFF(a, b)             ((a ##_off) + (b))
+#ifdef SYMMETRY
 #define DENS(a, b)            (g_dens_ ## a ## _ ## b)
+#else
+#define DENS(a, b)            (g_dens[OFF(a,b)])
+#endif
 #define DENS_DECL(a, b)       double g_dens_ ## a ## _ ## b = g_dens[OFF(a,b)]
 
+#define BAD_CACHE_UTILIZATION
 #ifdef BAD_CACHE_UTILIZATION
 #define DENS_DECL_SYMM(a, b)  double g_dens_ ## a ## _ ## b = g_dens[OFF(a,b)]; \
                               double g_dens_ ## b ## _ ## a = g_dens[OFF(b,a)]
@@ -119,49 +124,67 @@ double * fock = &g_thread_fock[omp_get_thread_num()*nbfn*nbfn];
 
 
   // 8-way symmetry
+  i_off = 0;
   #pragma omp for OMP_SCHEDULE REDUCE_CLAUSE
   for (int i = 0; i < nbfn; i++) {
     i_off = i * nbfn;
-    j_off = i_off;
 
-    for (j = i + 1; j < nbfn; j++) {
-      j_off += nbfn;
+#ifdef SYMMETRY
+    j_off = i_off + nbfn;
+    for (j = i + 1; j < nbfn; j++, j_off += nbfn) {
       DENS_DECL_SYMM(j,i);
+#else
+    j_off = 0;
+    for (j = 0; j < nbfn; j++, j_off += nbfn) {
+#endif /* SYMMETRY */
+
       TOL_DECL(i,j);
 
       if (g_schwarz[OFF(i,j)] < tol2e_over_schwmax) {
         CUT1(8 * (-2*j + i*(3-2*nbfn) + i*i + nbfn*(nbfn - 1))/2);
         continue;
       }
-      k_off = i_off - nbfn;
 
-      for (k = i; k < nbfn; k++) {
-        k_off += nbfn;
+#ifdef SYMMETRY
+      k_off = i_off;
+      for (k = i; k < nbfn; k++, k_off += nbfn) {
         DENS_DECL_SYMM(k,i);
         DENS_DECL_SYMM(k,j);
+#else
+      k_off = 0;
+      for (k = 0; k < nbfn; k++, k_off += nbfn) {
+#endif /* SYMMETRY */
+
         if (g_schwarz_max_j[k] < tol2e_over_g_schwarz_i_j) {
           CUT4(8 * ((k==i) ? nbfn - j - 1: nbfn - k - 1));
           continue;
         }
 
+#ifdef SYMMETRY
         l_off = ((k == i) ? j_off : k_off);
         for (l = 1 + ((k == i) ? j : k); l < nbfn; l++) {
           l_off += nbfn;
+#else
+        l_off = 0;
+        for (l = 0; l < nbfn; l++, l_off += nbfn) {
+#endif /* SYMMETRY */
 
           if (g_schwarz[OFF(k,l)] < tol2e_over_g_schwarz_i_j) {
             CUT2(8);
             continue;
           }
 
+#ifdef SYMMETRY
           DENS_DECL_SYMM(l,i);
           DENS_DECL_SYMM(l,j);
           DENS_DECL_SYMM(l,k);
+#endif
 
           CUT3(8);
           double gg = G(i, j, k, l);
 
 
-
+#ifdef SYMMETRY
 #if OMP_VERSION==1
 
 	#ifdef BAD_CACHE_UTILIZATION
@@ -295,6 +318,10 @@ double * fock = &g_thread_fock[omp_get_thread_num()*nbfn*nbfn];
 	}
 	#endif
 #endif//the not version 1 case
+#else
+	         UPDATE1(i,j,k,l);
+	         UPDATE2(i,j,k,l);
+#endif
 
         } // l
       } // k
@@ -372,7 +399,7 @@ double * fock = &g_thread_fock[omp_get_thread_num()*nbfn*nbfn];
   CUT_WRITEBACK;
 }
 
-
+#ifdef SYMMETRY
 void twoel_i_eq_j(double tol2e_over_schwmax) {
   CUT_DECLS;
   int i, k, l;
@@ -742,13 +769,14 @@ void twoel_i_eq_j_eq_k_eq_l(double tol2e_over_schwmax) {
 
   CUT_WRITEBACK;
 }
+#endif /* SYMMETRY */
 
 double twoel_fast(double schwmax) {
   double tol2e_over_schwmax = tol2e / schwmax;
 
+#ifdef SYMMETRY
 #pragma omp single nowait
 {
-
   // do the N^2 and smaller loops which directly accumulate to g_fock
   //this is done single threaded so we can save memory allocations
   twoel_ij_eq_kl(tol2e_over_schwmax);
@@ -759,7 +787,7 @@ double twoel_fast(double schwmax) {
 
   twoel_i_eq_j(tol2e_over_schwmax);
   twoel_k_eq_l(tol2e_over_schwmax);
-
+#endif /* SYMMETRY */
 
   // do the N^4 loop which will write to the g_partial_fock matrix, then
   // correctly accumulate the values back to g_fock at the end

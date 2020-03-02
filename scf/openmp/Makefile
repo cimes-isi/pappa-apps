@@ -10,6 +10,9 @@ OBJFILES = input.o integ.o output.o timer.o scf.o diagonalize.o twoel.o
 run: scf.x
 	time ./scf.x
 
+vg: scf.x
+	valgrind ./scf.x
+
 MTARGET = scf.x
 
 ifdef BLAS
@@ -33,6 +36,10 @@ endif
 
 ifndef NO_BOOKKEEPING
 CFLAGS += -DBOOKKEEPING
+endif
+
+ifndef NO_SYMMETRY
+CFLAGS += -DSYMMETRY
 endif
 
 ifdef BAD_CACHE
