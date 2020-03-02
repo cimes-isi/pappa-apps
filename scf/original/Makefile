@@ -13,7 +13,7 @@ scf.x:  $(OBJFILES)
 	$(CC) $(OBJFILES) $(CFLAGS) -o $(MTARGET) -lm
 
 run: $(MTARGET)
-	./$(MTARGET)
+	time ./$(MTARGET)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<

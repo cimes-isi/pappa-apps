@@ -8,7 +8,7 @@ LDFLAGS += -lm
 OBJFILES = input.o integ.o output.o timer.o scf.o diagonalize.o twoel.o
 
 run: scf.x
-	./scf.x
+	time ./scf.x
 
 MTARGET = scf.x
 

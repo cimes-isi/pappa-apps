@@ -41,6 +41,7 @@ double contract_matrices(double *, double *);
 #define UPDATE_EXCHANGE(a, b, c, d)  fock[OFF(a,c)] -= (0.50 * gg * DENS(b,d));
 
 #ifdef BOOKKEEPING
+extern long long int icut1,icut2,icut3,icut4;
 #define CUT_DECLS       long long int temp_icut1 = 0; \
                         long long int temp_icut2 = 0; \
                         long long int temp_icut3 = 0; \

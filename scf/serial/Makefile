@@ -18,7 +18,7 @@ scf.x:  $(OBJFILES)
 	$(CC) $(OBJFILES) $(CFLAGS) $(LDFLAGS) -o $(MTARGET) -lm
 
 run: scf.x
-	./scf.x
+	time ./scf.x
 
 vg: scf.x
 	valgrind ./scf.x

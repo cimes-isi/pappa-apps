@@ -35,7 +35,7 @@ scf.x:  $(OBJFILES)
 	$(CC) $(OBJFILES) $(CFLAGS) $(CLINK) -o $(MTARGET) -lm
 
 run: scf.x
-	./scf.x
+	time ./scf.x
 
 trace scf.trace: scf.x be.inpt
 	rm -f scf.trace
