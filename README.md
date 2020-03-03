@@ -14,15 +14,15 @@ necessary third party libraries.
 
 High-performance Geometric Multigrid
 
-https://hpgmg.org/
-https://bitbucket.org/hpgmg/hpgmg
+* https://hpgmg.org/
+* https://bitbucket.org/hpgmg/hpgmg
 
 # LULESH
 
 Laurence Unstructured Lagrangian-Eulerian Shock Hydrodynamics
 
-https://computing.llnl.gov/projects/co-design/lulesh
-https://github.com/LLNL/LULESH
+* https://computing.llnl.gov/projects/co-design/lulesh
+* https://github.com/LLNL/LULESH
 
 # MOT
 
@@ -30,9 +30,9 @@ Multiple-Object Tracking is a computer vision problem where multiple
 objects (such as pedestrians) are detected and their motion tracked
 over time.
 
-https://motchallenge.net/
-https://github.com/conan7882/GoogLeNet-Inception
-https://github.com/nwojke/deep_sort
+* https://motchallenge.net/
+* https://github.com/conan7882/GoogLeNet-Inception
+* https://github.com/nwojke/deep_sort
 
 # SAR
 
@@ -40,7 +40,7 @@ Synthetic Aperture RADAR is a mapping algorithm which stitches together
 large amounts of raw RADAR data to assemble a high quality map of the
 ground surface.
 
-https://github.com/dm6718/RITSAR
+* https://github.com/dm6718/RITSAR
 
 # SCF
 
