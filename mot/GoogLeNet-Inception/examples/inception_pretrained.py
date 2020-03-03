@@ -14,7 +14,7 @@ sys.path.append('../')
 import loader as loader
 from src.nets.googlenet import GoogLeNet
 
-PRETRINED_PATH = '/home/qge2/workspace/data/pretrain/inception/googlenet.npy'
+PRETRINED_PATH = '../data/dropbox/googlenet.npy'
 DATA_PATH = '../data/'
 IM_CHANNEL = 3
 
