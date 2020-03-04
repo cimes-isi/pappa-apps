@@ -21,7 +21,6 @@ double contract_matrices(double *, double *);
 #endif
 #define DENS_DECL(a, b)       double g_dens_ ## a ## _ ## b = g_dens[OFF(a,b)]
 
-#define BAD_CACHE_UTILIZATION
 #ifdef BAD_CACHE_UTILIZATION
 #define DENS_DECL_SYMM(a, b)  double g_dens_ ## a ## _ ## b = g_dens[OFF(a,b)]; \
                               double g_dens_ ## b ## _ ## a = g_dens[OFF(b,a)]
