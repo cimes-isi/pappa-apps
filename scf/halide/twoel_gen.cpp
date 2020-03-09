@@ -95,50 +95,48 @@ public:
         RVar gi, gj, gk, gl;
 
 
-        // symmetry domain A: 3-way symmetry.  i == j == k == l
-        RDom g_triple_symmetry_dom(0, nbfn, 0, nbfn, 0, nbfn, 0, nbfn);
-        gi = g_triple_symmetry_dom[0]; gj = g_triple_symmetry_dom[1]; gk = g_triple_symmetry_dom[2]; gl = g_triple_symmetry_dom[3];
-        g_triple_symmetry_dom.where(gi == gj && gi == gk && gj == gl);
-        Expr g_triple_symmetry = g(gi, gj, gk, gl);
-        g_fock(gi,gj) += g_triple_symmetry * (g_dens(gk,gl));
-        g_fock(gi,gk) += g_triple_symmetry * (Expr(-0.5) * g_dens(gj,gl));
+        // symmetry domain A: 3-way symmetry.  i == j == k == l.  1D iteration space
+        RDom g_triple_symmetry_dom(0, nbfn);
+        gi = g_triple_symmetry_dom[0];
+        Expr g_triple_symmetry = g(gi, gi, gi, gi);
+        g_fock(gi,gi) += g_triple_symmetry * (Expr(0.5) * g_dens(gi,gi));
 
-        // symmetry domain B: 2-way symmetry.  i == j, k == l, i < k
-        RDom g_double_symmetry_dom(0, nbfn, 0, nbfn, 0, nbfn, 0, nbfn);
-        gi = g_double_symmetry_dom[0]; gj = g_double_symmetry_dom[1]; gk = g_double_symmetry_dom[2]; gl = g_double_symmetry_dom[3];
-        g_double_symmetry_dom.where(gi == gj && gk == gl && gi < gk);
-        Expr g_double_symmetry = g(gi, gj, gk, gl);
-        g_fock(gi,gj) += g_double_symmetry * (g_dens(gk,gl));
-        g_fock(gi,gk) += g_double_symmetry * (Expr(-0.5) * g_dens(gj,gl));
-        g_fock(gk,gi) += g_double_symmetry * (Expr(-0.5) * g_dens(gl,gj));
-        g_fock(gk,gl) += g_double_symmetry * (g_dens(gi,gj));
+        // symmetry domain B: 2-way symmetry.  i == j, k == l, i < k.  2D iteration space
+        RDom g_double_symmetry_dom(0, nbfn, 0, nbfn);
+        gi = g_double_symmetry_dom[0]; gk = g_double_symmetry_dom[1];
+        g_double_symmetry_dom.where(gi < gk);
+        Expr g_double_symmetry = g(gi, gi, gk, gk);
+        g_fock(gi,gi) += g_double_symmetry * (g_dens(gk,gk));
+        g_fock(gi,gk) += g_double_symmetry * (Expr(-0.5) * g_dens(gi,gk));
+        g_fock(gk,gi) += g_double_symmetry * (Expr(-0.5) * g_dens(gk,gi));
+        g_fock(gk,gk) += g_double_symmetry * (g_dens(gi,gi));
 
-        // symmetry domain C: pairwise symmetry.  i < j, i == k, j == l
-        RDom g_pairwise_symmetry_dom(0, nbfn, 0, nbfn, 0, nbfn, 0, nbfn);
-        gi = g_pairwise_symmetry_dom[0]; gj = g_pairwise_symmetry_dom[1]; gk = g_pairwise_symmetry_dom[2]; gl = g_pairwise_symmetry_dom[3];
-        g_pairwise_symmetry_dom.where(gi < gj && gi== gk && gj == gl);
-        Expr g_pairwise_symmetry = g(gi, gj, gk, gl);
-        g_fock(gi,gj) += g_pairwise_symmetry * (g_dens(gk,gl) + g_dens(gl,gk));
-        g_fock(gi,gk) += g_pairwise_symmetry * (Expr(-0.5) * g_dens(gj,gl));
-        g_fock(gi,gl) += g_pairwise_symmetry * (Expr(-0.5) * g_dens(gj,gk));
-        g_fock(gj,gi) += g_pairwise_symmetry * (g_dens(gk,gl) + g_dens(gl,gk));
-        g_fock(gj,gk) += g_pairwise_symmetry * (Expr(-0.5) * g_dens(gi,gl));
-        g_fock(gj,gl) += g_pairwise_symmetry * (Expr(-0.5) * g_dens(gi,gk));
+        // symmetry domain C: pairwise symmetry.  i < j, i == k, j == l.  2D iteration space
+        RDom g_pairwise_symmetry_dom(0, nbfn, 0, nbfn);
+        gi = g_pairwise_symmetry_dom[0]; gj = g_pairwise_symmetry_dom[1];
+        g_pairwise_symmetry_dom.where(gi < gj);
+        Expr g_pairwise_symmetry = g(gi, gj, gi, gj);
+        g_fock(gi,gi) += g_pairwise_symmetry * (Expr(-0.5) * g_dens(gj,gj));
+        g_fock(gi,gj) += g_pairwise_symmetry * (g_dens(gi,gj) + g_dens(gj,gi));
+        g_fock(gi,gj) += g_pairwise_symmetry * (Expr(-0.5) * g_dens(gj,gi));
+        g_fock(gj,gi) += g_pairwise_symmetry * (g_dens(gi,gj) + g_dens(gj,gi));
+        g_fock(gj,gi) += g_pairwise_symmetry * (Expr(-0.5) * g_dens(gi,gj));
+        g_fock(gj,gj) += g_pairwise_symmetry * (Expr(-0.5) * g_dens(gi,gi));
 
-        // symmetry domain D: single symmetry.  i == j, k < l
-        RDom g_single_symmetry_dom(0, nbfn, 0, nbfn, 0, nbfn, 0, nbfn);
-        gi = g_single_symmetry_dom[0]; gj = g_single_symmetry_dom[1]; gk = g_single_symmetry_dom[2]; gl = g_single_symmetry_dom[3];
-        g_single_symmetry_dom.where(gi == gj && gk < gl);
-        Expr g_single_symmetry = g(gi, gj, gk, gl);
-        g_fock(gi,gj) += g_single_symmetry * (g_dens(gk,gl) + g_dens(gl,gk));
-        g_fock(gi,gk) += g_single_symmetry * (Expr(-0.5) * g_dens(gj,gl));
-        g_fock(gi,gl) += g_single_symmetry * (Expr(-0.5) * g_dens(gj,gk));
-        g_fock(gk,gi) += g_single_symmetry * (Expr(-0.5) * g_dens(gl,gj));
-        g_fock(gk,gl) += g_single_symmetry * (g_dens(gi,gj));
-        g_fock(gl,gi) += g_single_symmetry * (Expr(-0.5) * g_dens(gk,gj));
-        g_fock(gl,gk) += g_single_symmetry * (g_dens(gi,gj));
+        // symmetry domain D: single symmetry.  i == j, k < l.  3D iteration space
+        RDom g_single_symmetry_dom(0, nbfn, 0, nbfn, 0, nbfn);
+        gi = g_single_symmetry_dom[0]; gk = g_single_symmetry_dom[1]; gl = g_single_symmetry_dom[2];
+        g_single_symmetry_dom.where(gk < gl);
+        Expr g_single_symmetry = g(gi, gi, gk, gl);
+        g_fock(gi,gi) += g_single_symmetry * (g_dens(gk,gl) + g_dens(gl,gk));
+        g_fock(gi,gk) += g_single_symmetry * (Expr(-0.5) * g_dens(gi,gl));
+        g_fock(gi,gl) += g_single_symmetry * (Expr(-0.5) * g_dens(gi,gk));
+        g_fock(gk,gi) += g_single_symmetry * (Expr(-0.5) * g_dens(gl,gi));
+        g_fock(gk,gl) += g_single_symmetry * (g_dens(gi,gi));
+        g_fock(gl,gi) += g_single_symmetry * (Expr(-0.5) * g_dens(gk,gi));
+        g_fock(gl,gk) += g_single_symmetry * (g_dens(gi,gi));
 
-        // symmetry domain E: no symmetry.  i < j, i <= k, k < l, j != l
+        // symmetry domain E: no symmetry.  i < j, i <= k, k < l, j != l.  4D iteration space
         RDom g_no_symmetry_dom(0, nbfn, 0, nbfn, 0, nbfn, 0, nbfn);
         gi = g_no_symmetry_dom[0]; gj = g_no_symmetry_dom[1]; gk = g_no_symmetry_dom[2]; gl = g_no_symmetry_dom[3];
         g_no_symmetry_dom.where(gi < gj && gi <= gk && gk < gl && gi * nbfn + gj < gk * nbfn + gl);
