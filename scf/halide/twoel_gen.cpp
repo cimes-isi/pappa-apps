@@ -34,6 +34,8 @@ public:
     Var i{"i"}, j{"j"}, k{"k"}, l{"l"};
 
     void generate() {
+        Expr nbfn = g_fock_in_in.height();
+
         /* clamp all inputs, to prevent out-of-bounds errors from odd tile sizes and such */
         Func expnt, rnorm, x, y, z, fm, g_fock_in, g_dens;
 
@@ -88,7 +90,7 @@ public:
         Func gg{"gg"};
         gg(i, j, k, l) = (Expr(2.00) * Expr(pow(pi, 2.50)) / denom(i,j,k,l)) * ex(i,j,k,l) * f0val(i,j,k,l) * rnorm(i) * rnorm(j) * rnorm(k) * rnorm(l);
 
-        RDom r(0,g_fock_in_in.width(), 0, g_fock_in_in.height());
+        RDom r(0, nbfn, 0, nbfn);
 
         Func g_fock{"g_fock"};
         g_fock(i,j) = g_fock_in(i,j)
