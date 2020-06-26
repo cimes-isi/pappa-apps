@@ -613,6 +613,16 @@ def halide_gen(zones):
 
 
     # scheduling
+
+    # schedule the pieces of g
+    for clamped_input in [ expnt, rnorm, x, y, z, fm, g_fock_in, g_dens ]:
+        clamped_input.compute_root()
+    for g_precursor_matrix in [ expnt2, fac2, r2, x2, y2, z2 ]:
+        j_i = hl.Var("j_i")
+        j_o = hl.Var("j_o")
+        jii = hl.Var("jii")
+        g_precursor_matrix.compute_root().reorder(i, j).split(j, j_o, j_i, 8).fuse(i, j_i, jii).parallel(j_o).vectorize(jii, 8)
+
     # each zone should be one for-loop, and g should be calculated once for each inner loop iteration.
     # unroll the updates within a zone, parallelize and vectorize as much as possible
     for zone_name in zone_funcs:
@@ -622,7 +632,7 @@ def halide_gen(zones):
         updates = record['updates']
         expanded_iters = record['iters']
         r = record['rdom']
-        distinct_iters = [r[i] for i in range(len(r))]
+        distinct_iters = [r[i] for i in range(1, len(r))] # skip r[0], the unroll factor
         ru = record['unroll']
         gi = expanded_iters['i']
         gj = expanded_iters['j']
@@ -638,9 +648,12 @@ def halide_gen(zones):
         # schedule the actual work
         print("zone_func:", zone_func)
         print("distinct_iters:", distinct_iters)
-        zone_func.compute_root().update(0).reorder(*distinct_iters).unroll(ru).atomic().vectorize(distinct_iters[1], 8)
-        if len(distinct_iters) > 2:
-            zone_func.update(0).parallel(distinct_iters[-1])
+        zone_update = zone_func.update(0)
+        innermost = distinct_iters[0]
+        outermost = distinct_iters[-1]
+        zone_update.reorder(*distinct_iters).unroll(ru).atomic().vectorize(innermost, 8)
+        if len(distinct_iters) > 1:
+            zone_update.parallel(outermost)
 
         print(zone['name'], "after scheduling")
         zone_func.print_loop_nest()
@@ -652,8 +665,8 @@ def halide_gen(zones):
     # consider parallelizing over wider strips of j
     g_fock_out.parallel(j).vectorize(i, 8)
     # schedule the rv reduction
-    rv_intm = rv.update(0).reorder(r_rv.x, r_rv.y).rfactor([(r_rv.x, k), (r_rv.y, l)])
-    rv_intm.parallel(l).vectorize(k)
+    rv_intm = rv.update(0).reorder(r_rv.x, r_rv.y).rfactor([])
+    rv_intm.vectorize(hl.Var.outermost())
 
     g_fock_out.print_loop_nest()
 
