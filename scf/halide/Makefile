@@ -44,27 +44,12 @@ trace scf.trace: scf.x be.inpt
 pictures: scf.trace
 	../../halide/build/bin/HalideTraceDump -i scf.trace -t png
 
-VIDEO_WIDTH=600
-VIDEO_HEIGHT=480
+VIDEO_WIDTH=1920
+VIDEO_HEIGHT=1080
 video: scf.trace
 	rm -f scf.mp4
-	cat scf.trace | ../../halide/build/bin/HalideTraceViz \
-	  --size $(VIDEO_WIDTH) $(VIDEO_HEIGHT) --zoom 4 --timestep 32 --hold 100 --decay 5 5 --gray \
-	  --move  32  48 --func g_fock_out               --move  32  40 --label g_fock_out               "g_fock out"     1 \
-	  --move 232  48 --func g_fock_no_symmetry       --move 232  40 --label g_fock_no_symmetry       "fock nosymm"    1 \
-	  --move 432  48 --func g_fock_pairwise_symmetry --move 432  40 --label g_fock_pairwise_symmetry "fock pairwise"  1 \
-	  --move  32 148 --func g_fock_single_symmetry   --move  32 140 --label g_fock_single_symmetry   "fock single"    1 \
-	  --move 232 148 --func g_fock_double_symmetry   --move 232 140 --label g_fock_double_symmetry   "fock double"    1 \
-	  --move 432 148 --func g_fock_triple_symmetry   --move 432 140 --label g_fock_triple_symmetry   "fock triple"    1 \
-	  --move  32 248 --func g_dens_in                --move  32 240 --label g_dens_in                g_dens           1 \
-	  --move 232 248 --func 'r2$$0'                  --move 232 240 --label 'r2$$0'                  r2               1 \
-	  --move 432 248 --func fac2                     --move 432 240 --label fac2                     fac2             1 \
-	  --move  32 348 --func 'x2$$0'                  --move  32 340 --label 'x2$$0'                  x2               1 \
-	  --move 232 348 --func 'y2$$0'                  --move 232 340 --label 'y2$$0'                  y2               1 \
-	  --move 432 348 --func 'z2$$0'                  --move 432 340 --label 'z2$$0'                  z2               1 \
-	  --move 432 450 --func rnorm_in                 --move 432 442 --label rnorm_in                 rnorm            1 \
-	  --zoom 1.6 \
-	  --move  32 450 --func fm_in                    --move  32 442 --label fm_in                    fm               1 \
+	cat scf.trace | HalideTraceViz \
+	  --size $(VIDEO_WIDTH) $(VIDEO_HEIGHT) --zoom 4 --timestep 32 --hold 100 --decay 5 5 --gray --auto_layout \
 	| ffmpeg -loglevel warning -f rawvideo -pix_fmt bgr32 -s $(VIDEO_WIDTH)x$(VIDEO_HEIGHT) -i /dev/stdin -c:v h264 scf.mp4
 
 vg: scf.x
