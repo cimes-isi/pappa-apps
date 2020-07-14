@@ -96,21 +96,6 @@ zones_1d = [
             ("i","i","i","i",0.5,"i","i","i","i"),
         ]
     },
-    {
-        "name": "ij_lower_kl_lower_pair_diagonal",
-        "iterators": [ "i", "j" ],
-        "conditions": [ ("i", "<", "j"), ("ij", "==", "kl") ],
-        "updates": [
-            ("i","j","i","j",1.0,"i","j","i","j"),
-            ("i","j","i","j",1.0,"i","j","j","i"),
-            ("i","j","i","j",1.0,"j","i","i","j"),
-            ("i","j","i","j",1.0,"j","i","j","i"),
-            ("i","j","i","j",-.5,"i","i","j","j"),
-            ("i","j","i","j",-.5,"i","j","j","i"),
-            ("i","j","i","j",-.5,"j","i","i","j"),
-            ("i","j","i","j",-.5,"j","j","i","i"),
-        ]
-    },
 ]
 
 zones = zones_1d + zones_2d + zones_3d + zones_4d
