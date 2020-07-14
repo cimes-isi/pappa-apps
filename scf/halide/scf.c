@@ -91,6 +91,7 @@ int main(int argc, char **argv) {
         assert(!error);
         swap_g_fock();
 #ifdef TRACING
+        printf("twoel took %f seconds\n", timer());
         exit(0);
 #endif /* TRACING */
         etwo = etwo_buffer(0);

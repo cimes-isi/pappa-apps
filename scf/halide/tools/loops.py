@@ -17,43 +17,8 @@ original_zones = [
     }
 ]
 
-zones = [
-    # GOOD
-    {
-        "name": "ij_diagonal_kl_diagonal_pairs_diagonal",
-        "iterators": [ "i" ],
-        "conditions": [ ("i", "==", "j"), ("k", "==", "l"), ("i", "==", "k") ],
-        "updates": [
-            ("i","i","i","i",0.5,"i","i","i","i"),
-        ]
-    },
-    {
-        "name": "ij_diagonal_kl_diagonal_pairs_lower",
-        "iterators": [ "i", "k" ],
-        "conditions": [ ("i", "==", "j"), ("k", "==", "l"), ("ij", "<", "kl") ],
-        "updates": [
-            ("i","i","k","k",1.0,"i","i","k","k"),
-            ("i","i","k","k",1.0,"k","k","i","i"),
-            ("i","i","k","k",-.5,"i","k","i","k"),
-            ("i","i","k","k",-.5,"k","i","k","i"),
-        ]
-    },
-    {
-        "name": "ij_diagonal_kl_lower",
-        "iterators": [ "i", "j", "k", "l" ],
-        "conditions": [ ("i", "==", "j"), ("k", "<", "l") ],
-        "updates": [
-            ("i","i","k","l",1.0,"i","i","k","l"),
-            ("i","i","l","k",1.0,"i","i","l","k"),
-            ("k","l","i","j",1.0,"k","l","i","j"),
-            ("l","k","i","j",1.0,"l","k","i","j"),
-            ("i","i","k","l",-.5,"i","k","i","l"),
-            ("i","i","l","k",-.5,"i","l","i","k"),
-            ("k","l","i","j",-.5,"k","i","l","j"),
-            ("l","k","i","j",-.5,"l","i","k","j"),
-        ]
-    },
-    {
+zones_4d = [
+    { # 4D
         "name": "ij_lower_kl_lower_pairs_lower",
         "iterators": [ "i", "j", "k", "l" ],
         "conditions": [ ("i", "<", "j"), ("k", "<", "l"), ("ij", "<", "kl") ],
@@ -76,6 +41,61 @@ zones = [
             ("j","i","l","k",-.5,"j","l","i","k"),
         ]
     },
+]
+zones_3d = [
+    { # 3D
+        "name": "ij_diagonal_kl_lower",
+        "iterators": [ "i", "j", "k", "l" ],
+        "conditions": [ ("i", "==", "j"), ("k", "<", "l") ],
+        "updates": [
+            ("i","i","k","l",1.0,"i","i","k","l"),
+            ("i","i","l","k",1.0,"i","i","l","k"),
+            ("k","l","i","j",1.0,"k","l","i","j"),
+            ("l","k","i","j",1.0,"l","k","i","j"),
+            ("i","i","k","l",-.5,"i","k","i","l"),
+            ("i","i","l","k",-.5,"i","l","i","k"),
+            ("k","l","i","j",-.5,"k","i","l","j"),
+            ("l","k","i","j",-.5,"l","i","k","j"),
+        ]
+    },
+]
+zones_2d = [
+    { # 2D
+        "name": "ij_lower_kl_lower_pair_diagonal",
+        "iterators": [ "i", "j" ],
+        "conditions": [ ("i", "<", "j"), ("ij", "==", "kl") ],
+        "updates": [
+            ("i","j","i","j",1.0,"i","j","i","j"),
+            ("i","j","i","j",1.0,"i","j","j","i"),
+            ("i","j","i","j",1.0,"j","i","i","j"),
+            ("i","j","i","j",1.0,"j","i","j","i"),
+            ("i","j","i","j",-.5,"i","i","j","j"),
+            ("i","j","i","j",-.5,"i","j","j","i"),
+            ("i","j","i","j",-.5,"j","i","i","j"),
+            ("i","j","i","j",-.5,"j","j","i","i"),
+        ]
+    },
+    { # 2D
+        "name": "ij_diagonal_kl_diagonal_pairs_lower",
+        "iterators": [ "i", "k" ],
+        "conditions": [ ("i", "==", "j"), ("k", "==", "l"), ("ij", "<", "kl") ],
+        "updates": [
+            ("i","i","k","k",1.0,"i","i","k","k"),
+            ("i","i","k","k",1.0,"k","k","i","i"),
+            ("i","i","k","k",-.5,"i","k","i","k"),
+            ("i","i","k","k",-.5,"k","i","k","i"),
+        ]
+    },
+]
+zones_1d = [
+    { # 1D
+        "name": "ij_diagonal_kl_diagonal_pairs_diagonal",
+        "iterators": [ "i" ],
+        "conditions": [ ("i", "==", "j"), ("k", "==", "l"), ("i", "==", "k") ],
+        "updates": [
+            ("i","i","i","i",0.5,"i","i","i","i"),
+        ]
+    },
     {
         "name": "ij_lower_kl_lower_pair_diagonal",
         "iterators": [ "i", "j" ],
@@ -92,6 +112,8 @@ zones = [
         ]
     },
 ]
+
+zones = zones_1d + zones_2d + zones_3d + zones_4d
 
 # for zone in zones:
 #     updates = []
@@ -311,7 +333,7 @@ def test_symmetry(N=8):
     print("--------")
 
 
-def halide_gen(zones):
+def halide_pipeline(zones, tracing=False, tracing_g=False):
     import halide as hl
     from math import pi
 
@@ -336,6 +358,8 @@ def halide_gen(zones):
             r.where(a >= b)
         print("resulting where clause:", r)
 
+    all_funcs = []
+
     # input scalars
     delo2  = hl.Param(hl.Float(64), "delo2")
     delta  = hl.Param(hl.Float(64), "delta")
@@ -353,7 +377,6 @@ def halide_gen(zones):
     g_fock_in_in = hl.ImageParam(hl.Float(64), 2, "g_fock_in")
     g_dens_in    = hl.ImageParam(hl.Float(64), 2, "g_dens_in")
 
-
     # output scalars
     rv = hl.Func("rv")
 
@@ -363,6 +386,7 @@ def halide_gen(zones):
     # our function's API
     all_inputs = [ delo2, delta, rdelta, expnt_in, rnorm_in, x_in, y_in, z_in, fm_in, g_fock_in_in, g_dens_in ]
     all_outputs = [ rv, g_fock_out ]
+    all_funcs = [ rv, g_fock_out ]
 
     # iterators
     i = hl.Var("i")
@@ -391,6 +415,8 @@ def halide_gen(zones):
     expnt2 = hl.Func("expnt2")
     expnt_inv = hl.Func("expnt_inv")
 
+    all_funcs += [ dx, dy, dz, r2, expnt2, expnt_inv ]
+
     dx[i,j] = x[i] - x[j]
     dy[i,j] = y[i] - y[j]
     dz[i,j] = z[i] - z[j]
@@ -411,9 +437,11 @@ def halide_gen(zones):
     denom[i,j,k,l]  = expnt2[i,j] * expnt2[k,l] * hl.sqrt(expnt2[i,j] + expnt2[k,l])
     fac4d[i,j,k,l]  = expnt2[i,j] * expnt2[k,l] /        (expnt2[i,j] + expnt2[k,l])
 
-    x2   = hl.Func("x2")
-    y2   = hl.Func("y2")
-    z2   = hl.Func("z2")
+    all_funcs += [ fac2, ex_arg, ex, denom, fac4d ]
+
+    x2   = hl.Func("g_internal_x2")
+    y2   = hl.Func("g_internal_y2")
+    z2   = hl.Func("g_internal_z2")
     rpq2 = hl.Func("rpq2")
     x2[i,j] = (x[i] * expnt[i] + x[j] * expnt[j]) * expnt_inv[i,j]
     y2[i,j] = (y[i] * expnt[i] + y[j] * expnt[j]) * expnt_inv[i,j]
@@ -422,6 +450,8 @@ def halide_gen(zones):
           (x2[i,j] - x2[k,l]) * (x2[i,j] - x2[k,l])
         + (y2[i,j] - y2[k,l]) * (y2[i,j] - y2[k,l])
         + (z2[i,j] - z2[k,l]) * (z2[i,j] - z2[k,l]))
+
+    all_funcs += [ x2, y2, z2, rpq2 ]
 
     f0t   = hl.Func("f0t")
     f0n   = hl.Func("f0n")
@@ -438,8 +468,22 @@ def halide_gen(zones):
          + f0x[i,j,k,l] * hl.f64(1./3.) * (fm[f0n[i,j,k,l],3]
          + f0x[i,j,k,l] * hl.f64(0.25) *   fm[f0n[i,j,k,l],4]))))
 
+
+
     g = hl.Func("g")
-    g[i,j,k,l] = (hl.f64(2.00) * hl.f64(pow(pi, 2.50)) / denom[i,j,k,l]) * ex[i,j,k,l] * f0val[i,j,k,l] * rnorm[i] * rnorm[j] * rnorm[k] * rnorm[l]
+
+    if tracing and tracing_g:
+        g_trace_in = hl.ImageParam(hl.Float(64), 4, "g_trace_in")
+        g_trace    = hl.BoundaryConditions.constant_exterior(g_trace_in, 0)
+        all_inputs.append(g_trace_in)
+        all_funcs.append(g_trace)
+        g_trace.compute_root()
+        g[i,j,k,l] = (hl.f64(2.00) * hl.f64(pow(pi, 2.50)) / denom[i,j,k,l]) * ex[i,j,k,l] * f0val[i,j,k,l] * rnorm[i] * rnorm[j] * rnorm[k] * rnorm[l] + g_trace[i,j,k,l]
+    else:
+        g_trace = None
+        g[i,j,k,l] = (hl.f64(2.00) * hl.f64(pow(pi, 2.50)) / denom[i,j,k,l]) * ex[i,j,k,l] * f0val[i,j,k,l] * rnorm[i] * rnorm[j] * rnorm[k] * rnorm[l]
+
+    all_funcs += [ f0t, f0n, f0x, f0val, g ]
 
     # define g_fock()
     g_fock_components = [ g_fock_in ]
@@ -570,7 +614,8 @@ def halide_gen(zones):
                 coeff = updates[updatekey][dkey]
                 oiv.append(oi)
                 ojv.append(oj)
-                div.append(di)
+                div.append(di)# INPUT SCALARS
+
                 djv.append(dj)
                 coeffs.append(coeff)
                 print("%s[%s, %s] += g[%s, %s, %s, %s] * g_dens[%s, %s] * %f"%(name, oi.name(), oj.name(), gi.name(), gj.name(), gk.name(), gl.name(), di.name(), dj.name(), coeff))
@@ -590,6 +635,8 @@ def halide_gen(zones):
         zone_func[maybe_mux(oiv), maybe_mux(ojv)] += expr
         print("%s[%s, %s] += %s"%(name, maybe_mux(oiv), maybe_mux(ojv), expr))
 
+        all_funcs.append(zone_func)
+
         #if name == 'g_pairwise_symmetry':
         g_fock_components.append(zone_func)
         zone_funcs[name] = { "func": zone_func, "zone": zone, "updates": updates, "iters": expanded_iters, "rdom": r, "unroll": ru }
@@ -602,6 +649,8 @@ def halide_gen(zones):
             expr += zone[i,j]
     g_fock = hl.Func("g_fock")
     g_fock[i,j] = expr
+
+    all_funcs.append(g_fock)
 
     g_fock_out[i, j] = g_fock[i,j]
 
@@ -651,7 +700,7 @@ def halide_gen(zones):
         zone_update = zone_func.update(0)
         innermost = distinct_iters[0]
         outermost = distinct_iters[-1]
-        zone_update.reorder(*distinct_iters).unroll(ru).atomic().vectorize(innermost, 8)
+        zone_update.reorder(*distinct_iters).unroll(ru).atomic()#.vectorize(innermost, 8)
         if len(distinct_iters) > 1:
             zone_update.parallel(outermost)
 
@@ -670,22 +719,37 @@ def halide_gen(zones):
 
     g_fock_out.print_loop_nest()
 
+    # tracing
+    if tracing:
+        for func in all_funcs:
+            if func != g_trace:
+                func.trace_stores()
+            func.trace_loads()
+
     # code generation
     p = hl.Pipeline(all_outputs)
+    return p, all_outputs, all_inputs
+
+def halide_gen(zones, tracing=True):
+    import halide as hl
+    p, all_outputs, all_inputs = halide_pipeline(zones, tracing)
     p.compile_to(
         {
             hl.Output.c_header: "twoel.h",
             hl.Output.c_source: "twoel.cpp",
             hl.Output.static_library: "twoel.a",
             hl.Output.stmt_html: "twoel.html",
+            # the following outputs are useful for running it from python
+            #hl.Output.object: "twoel.o",
+            #hl.Output.python_extension: "twoel.py.cpp",
         }, all_inputs, "twoel"
     )
 
-    return all_outputs, all_inputs
+    return p, all_outputs, all_inputs
 
 
 if __name__ == "__main__":
     test_symmetry()
-    outputs, inputs = halide_gen(zones)
+    pipeline, outputs, inputs = halide_gen(zones, tracing=False)
     print({"outputs": outputs})
     print({"inputs": inputs})
