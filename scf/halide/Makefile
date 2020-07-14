@@ -2,12 +2,10 @@
 
 CC  = clang++
 CXX = clang++
-HALIDE_INCDIR=../../halide/build/include
-HALIDE_LIBDIR=../../halide/build/lib
-CFLAGS = -O3 -mtune=native -march=native -g -Wall -Wno-deprecated -I$(HALIDE_INCDIR)
+CFLAGS = -O3 -mtune=native -march=native -g -Wall -Wno-deprecated
 CXXFLAGS = $(CFLAGS)
-CLINK = -L$(HALIDE_LIBDIR) -ldl -lpthread
-CXXLINK = -L$(HALIDE_LIBDIR) -lHalide
+CLINK = -ldl -lpthread
+CXXLINK = -lHalide
 
 TARGET=host-x86-64
 #TARGET=$(TARGET)-profile
@@ -19,9 +17,9 @@ MACHINE_PARAMS=32,16777216,40
 #AUTOSCHEDULER=Adams2019
 
 ifneq ($(AUTOSCHEDULER),)
-SCHEDLIB=../../halide/build/lib/libauto_schedule.so
+SCHEDLIB=/usr/local/lib/x86_64-linux-gnu/libauto_schedule.so
 ifeq ($(AUTOSCHEDULER),Li2018)
-SCHEDLIB=../../halide/build/lib/libgradient_autoscheduler.so
+SCHEDLIB=/usr/local/lib/x86_64-linux-gnu/libgradient_autoscheduler.so
 endif
 endif
 
@@ -42,7 +40,7 @@ trace scf.trace: scf.x be.inpt
 	HL_TRACE_FILE=scf.trace ./scf.x
 
 pictures: scf.trace
-	../../halide/build/bin/HalideTraceDump -i scf.trace -t png
+	HalideTraceDump -i scf.trace -t png
 
 VIDEO_WIDTH=1920
 VIDEO_HEIGHT=1080
