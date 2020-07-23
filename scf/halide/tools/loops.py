@@ -3,6 +3,7 @@
 '''generate halide code to take advantage of the symmetry of g()'''
 
 import sys
+import json
 
 original_zones = [
     # GOOD
@@ -19,7 +20,7 @@ original_zones = [
 
 zones_4d = [
     { # 4D
-        "name": "ij_lower_kl_lower_pairs_lower",
+        "name": "4D_ij_low_kl_low_pairs_low",
         "iterators": [ "i", "j", "k", "l" ],
         "conditions": [ ("i", "<", "j"), ("k", "<", "l"), ("ij", "<", "kl") ],
         "updates": [
@@ -44,8 +45,8 @@ zones_4d = [
 ]
 zones_3d = [
     { # 3D
-        "name": "ij_diagonal_kl_lower",
-        "iterators": [ "i", "j", "k", "l" ],
+        "name": "3D_ij_eq_kl_low",
+        "iterators": [ "i", "k", "l" ],
         "conditions": [ ("i", "==", "j"), ("k", "<", "l") ],
         "updates": [
             ("i","i","k","l",1.0,"i","i","k","l"),
@@ -61,7 +62,7 @@ zones_3d = [
 ]
 zones_2d = [
     { # 2D
-        "name": "ij_lower_kl_lower_pair_diagonal",
+        "name": "2D_ij_low_kl_low_pairs_eq",
         "iterators": [ "i", "j" ],
         "conditions": [ ("i", "<", "j"), ("ij", "==", "kl") ],
         "updates": [
@@ -76,7 +77,7 @@ zones_2d = [
         ]
     },
     { # 2D
-        "name": "ij_diagonal_kl_diagonal_pairs_lower",
+        "name": "2D_ij_eq_kl_eq_pairs_low",
         "iterators": [ "i", "k" ],
         "conditions": [ ("i", "==", "j"), ("k", "==", "l"), ("ij", "<", "kl") ],
         "updates": [
@@ -89,7 +90,7 @@ zones_2d = [
 ]
 zones_1d = [
     { # 1D
-        "name": "ij_diagonal_kl_diagonal_pairs_diagonal",
+        "name": "1D_ij_eq_kl_eq_pairs_eq",
         "iterators": [ "i" ],
         "conditions": [ ("i", "==", "j"), ("k", "==", "l"), ("i", "==", "k") ],
         "updates": [
@@ -105,15 +106,28 @@ zones = zones_1d + zones_2d + zones_3d + zones_4d
 #     for gi, gj, gk, gl, coeff, ox, oy, dx, dy in zone['updates']:
 #         updates.append({"coefficient": coeff, "g": (gi, gj, gk, gl), "out": (ox, oy), "dens": (dx, dy)})
 #     zone['updates'] = updates
-#     print(zone)
+#     trace(zone)
 # exit(0)
+
+quiet = True
+def trace(*args, **kwargs):
+    if not quiet:
+        print(*args, **kwargs)
+
+def be_quiet():
+    global quiet
+    quiet = True
+
+def be_verbose():
+    global quiet
+    quiet = False
+
 
 def test_symmetry(N=8):
     # SIMPLE LOOPS VERSION
 
     def tally_score(i, j, our_score, quiet=False):
-        if not quiet:
-            print("g_fock[%d,%d] = old g_fock[%d,%d]"%(i, j, i, j))
+        trace("g_fock[%d,%d] = old g_fock[%d,%d]"%(i, j, i, j))
         total_points = 0
         good_points = 0
         for key in sorted(our_score.keys()):
@@ -129,10 +143,8 @@ def test_symmetry(N=8):
                 good_points += 1
             else:
                 prefix = "!!"
-            if not quiet:
-                print("%s + g(%d,%d,%d,%d) * g_dens(%d,%d) * %4.1f : symmetric=%4.1f (%s → %s)"%(prefix, si, sj, sk, sl, dx, dy, good_coeff, symm_coeff, good_names, symm_names))
-        if not quiet:
-            print("    .... that's %d good points out of %d total."%(good_points,total_points))
+            trace("%s + g(%d,%d,%d,%d) * g_dens(%d,%d) * %4.1f : symmetric=%4.1f (%s → %s)"%(prefix, si, sj, sk, sl, dx, dy, good_coeff, symm_coeff, good_names, symm_names))
+        trace("    .... that's %d good points out of %d total."%(good_points,total_points))
         return good_points, total_points
 
     def sort_iters(*args):
@@ -192,8 +204,8 @@ def test_symmetry(N=8):
             N = self.N
             for i in range(N):
                 for j in range(N):
-                    print("g_fock[%d,%d] = "%(i,j))
-                    print("    old g_fock[%d,%d]"%(i,j))
+                    trace("g_fock[%d,%d] = "%(i,j))
+                    trace("    old g_fock[%d,%d]"%(i,j))
                     history = self[i,j].history
                     def sort_key(t):
                         name, gi, gj, gk, gl, coeff, dx, dy = t
@@ -212,7 +224,7 @@ def test_symmetry(N=8):
                                 coeff = -coeff
                             if name != "":
                                 name = "  # " + name
-                            print("    %c %.1f  g(%d,%d,%d,%d)  g_dens(%d,%d)%s"%(sign, coeff, gi, gj, gk, gl, dx, dy, name))
+                            trace("    %c %.1f  g(%d,%d,%d,%d)  g_dens(%d,%d)%s"%(sign, coeff, gi, gj, gk, gl, dx, dy, name))
 
     class Log():
         """Represents an element of the output matrix, logs anything that the algorithm writes to that element."""
@@ -257,7 +269,7 @@ def test_symmetry(N=8):
         real = { "i": i, "j": j, "k": k, "l": l }
         for m in range(len(updates)):
             gi, gj, gk, gl, coeff, ox, oy, dx, dy = updates[m]
-            #print("gi=%d gj=%d gk=%d gl=%d coeff=%f ox=%d oy=%d dx=%d dy=%d #%d"%(real[gi], real[gj], real[gk], real[gl], coeff, real[ox], real[oy], real[dx], real[dy], m))
+            #trace("gi=%d gj=%d gk=%d gl=%d coeff=%f ox=%d oy=%d dx=%d dy=%d #%d"%(real[gi], real[gj], real[gk], real[gl], coeff, real[ox], real[oy], real[dx], real[dy], m))
             symmetry_fock[real[ox], real[oy]].log("%d,%d,%d,%d "%(i,j,k,l) + name + "#%d"%m, coeff, i, j, k, l, real[dx], real[dy])
 
     for i in range(N):
@@ -301,24 +313,24 @@ def test_symmetry(N=8):
             good, total = tally_score(i, j, score, quiet=True)
             scores[i,j] = (good, total)
 
-    print("--------")
-    print("good/total by element:")
+    trace("--------")
+    trace("good/total by element:")
     failure_count = 0
     for i in range(N):
         for j in range(N):
             good, total = scores[i,j]
-            print("  %3d/%3d"%(good, total), end="")
+            trace("  %3d/%3d"%(good, total), end="")
             if good != total:
                 failure_count += 1
-        print()
+        trace()
     if failure_count:
-        print("%d failures found; symmetry optimizations do not equal the original computation."%failure_count)
+        trace("%d failures found; symmetry optimizations do not equal the original computation."%failure_count)
         sys.exit(1)
 
-    print("--------")
+    trace("--------")
 
 
-def halide_pipeline(zones, tracing=False, tracing_g=False):
+def halide_pipeline(zones, tracing=False, tracing_g=False, tilesize=30, vectorsize=8):
     import halide as hl
     from math import pi
 
@@ -341,7 +353,7 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
             r.where(a > b)
         if cond == '>=':
             r.where(a >= b)
-        print("resulting where clause:", r)
+        trace("resulting where clause:", r)
 
     all_funcs = []
 
@@ -374,15 +386,11 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
     all_funcs = [ rv, g_fock_out ]
 
     # iterators
-    i = hl.Var("i")
-    j = hl.Var("j")
-    k = hl.Var("k")
-    l = hl.Var("l")
+    i, j, k, l = [ hl.Var(c) for c in "ijkl" ] # normal iterator variables
 
     nbfn = g_fock_in_in.height()
 
     # clamp all inputs, to prevent out-of-bounds errors from odd tile sizes and such
-
     expnt     = hl.BoundaryConditions.constant_exterior(expnt_in    , 0)
     rnorm     = hl.BoundaryConditions.constant_exterior(rnorm_in    , 0)
     x         = hl.BoundaryConditions.constant_exterior(x_in        , 0)
@@ -391,12 +399,13 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
     fm        = hl.BoundaryConditions.constant_exterior(fm_in       , 0)
     g_fock_in = hl.BoundaryConditions.constant_exterior(g_fock_in_in, 0)
     g_dens    = hl.BoundaryConditions.constant_exterior(g_dens_in   , 0)
+    all_clamps = [expnt, rnorm, x, y, z, fm, g_fock_in, g_dens]
 
     # define g()
     dx = hl.Func("dx")
     dy = hl.Func("dy")
     dz = hl.Func("dz")
-    r2 = hl.Func("r2")
+    r2 = hl.Func("g_r2")
     expnt2 = hl.Func("expnt2")
     expnt_inv = hl.Func("expnt_inv")
 
@@ -424,9 +433,9 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
 
     all_funcs += [ fac2, ex_arg, ex, denom, fac4d ]
 
-    x2   = hl.Func("g_internal_x2")
-    y2   = hl.Func("g_internal_y2")
-    z2   = hl.Func("g_internal_z2")
+    x2   = hl.Func("g_x2")
+    y2   = hl.Func("g_y2")
+    z2   = hl.Func("g_z2")
     rpq2 = hl.Func("rpq2")
     x2[i,j] = (x[i] * expnt[i] + x[j] * expnt[j]) * expnt_inv[i,j]
     y2[i,j] = (y[i] * expnt[i] + y[j] * expnt[j]) * expnt_inv[i,j]
@@ -453,22 +462,7 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
          + f0x[i,j,k,l] * hl.f64(1./3.) * (fm[f0n[i,j,k,l],3]
          + f0x[i,j,k,l] * hl.f64(0.25) *   fm[f0n[i,j,k,l],4]))))
 
-
-
-    g = hl.Func("g")
-
-    if tracing and tracing_g:
-        g_trace_in = hl.ImageParam(hl.Float(64), 4, "g_trace_in")
-        g_trace    = hl.BoundaryConditions.constant_exterior(g_trace_in, 0)
-        all_inputs.append(g_trace_in)
-        all_funcs.append(g_trace)
-        g_trace.compute_root()
-        g[i,j,k,l] = (hl.f64(2.00) * hl.f64(pow(pi, 2.50)) / denom[i,j,k,l]) * ex[i,j,k,l] * f0val[i,j,k,l] * rnorm[i] * rnorm[j] * rnorm[k] * rnorm[l] + g_trace[i,j,k,l]
-    else:
-        g_trace = None
-        g[i,j,k,l] = (hl.f64(2.00) * hl.f64(pow(pi, 2.50)) / denom[i,j,k,l]) * ex[i,j,k,l] * f0val[i,j,k,l] * rnorm[i] * rnorm[j] * rnorm[k] * rnorm[l]
-
-    all_funcs += [ f0t, f0n, f0x, f0val, g ]
+    all_funcs += [ f0t, f0n, f0x, f0val ]
 
     # define g_fock()
     g_fock_components = [ g_fock_in ]
@@ -491,17 +485,17 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
                         iter_vars[_b] = _a
                 else:
                     iter_vars[b] = a
-        print("zone %s"%name)
+        trace("zone %s"%name)
         for _ in range(1):
             for a in iter_vars:
                 # handle 4 rounds of aliasing
                 b = iter_vars[a]
                 if b in iter_vars and iter_vars[b] != b:
                     iter_vars[a] = iter_vars[b]
-        print("final iter mapping:", iter_vars)
+        trace("final iter mapping:", iter_vars)
         distinct_iters = sorted(set(iter_vars.values()))
         distinct_iters = [ x for x in distinct_iters if len(x) == 1 ]
-        #print("distinct iters:", distinct_iters)
+        #trace("distinct iters:", distinct_iters)
 
         # TODO: this is redundant with the real version below, consolidate this better
         updates = {}
@@ -521,9 +515,9 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
             for dkey in updates[updatekey].keys():
                 piece_count += 1
 
-        print("piece_count:", piece_count)
+        trace("piece_count:", piece_count)
         rdom_iters = [(0, piece_count)] + ([(0, nbfn)] * len(distinct_iters))
-        print("rdom iters:", rdom_iters)
+        trace("rdom iters:", rdom_iters)
         r = hl.RDom(rdom_iters, name+"_dom")
         # set local variables for RVars
         expanded_iters = {}
@@ -548,7 +542,7 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
         expanded_iters['ij'] = [ expanded_iters["i"], expanded_iters["j"] ]
         expanded_iters['kl'] = [ expanded_iters["k"], expanded_iters["l"] ]
 
-        print("generating where clause conditions for %s"%name)
+        trace("generating where clause conditions for %s"%name)
         for a, cond, b in zone['conditions']:
             a = expanded_iters[a]
             b = expanded_iters[b]
@@ -603,7 +597,7 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
 
                 djv.append(dj)
                 coeffs.append(coeff)
-                print("%s[%s, %s] += g[%s, %s, %s, %s] * g_dens[%s, %s] * %f"%(name, oi.name(), oj.name(), gi.name(), gj.name(), gk.name(), gl.name(), di.name(), dj.name(), coeff))
+                trace("%s[%s, %s] += g[%s, %s, %s, %s] * g_dens[%s, %s] * %f"%(name, oi.name(), oj.name(), gi.name(), gj.name(), gk.name(), gl.name(), di.name(), dj.name(), coeff))
                 piece_count += 1
 
         # generate this symmetry zone
@@ -613,18 +607,32 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
                 return s[0]
             else:
                 return hl.mux(hl.Expr(ru), s)
-        gg = g[gi, gj, gk, gl]
+        zone_g = hl.Func("g_func_" + zone['name'])
+
+        if tracing and tracing_g:
+            g_trace_in = hl.ImageParam(hl.Float(64), 4, "g_trace_in")
+            g_trace    = hl.BoundaryConditions.constant_exterior(g_trace_in, 0)
+            all_inputs.append(g_trace_in)
+            all_funcs.append(g_trace)
+            g_trace.compute_root()
+            zone_g[i,j,k,l] = (hl.f64(2.00) * hl.f64(pow(pi, 2.50)) / denom[i,j,k,l]) * ex[i,j,k,l] * f0val[i,j,k,l] * rnorm[i] * rnorm[j] * rnorm[k] * rnorm[l] + g_trace[i,j,k,l]
+        else:
+            g_trace = None
+            zone_g[i,j,k,l] = (hl.f64(2.00) * hl.f64(pow(pi, 2.50)) / denom[i,j,k,l]) * ex[i,j,k,l] * f0val[i,j,k,l] * rnorm[i] * rnorm[j] * rnorm[k] * rnorm[l]
+
+        gg = zone_g[gi, gj, gk, gl]
         zone_func = hl.Func(name)
         zone_func[i,j] = hl.f64(0.0)
         expr = gg * g_dens[maybe_mux(div), maybe_mux(djv)] * maybe_mux(coeffs)
         zone_func[maybe_mux(oiv), maybe_mux(ojv)] += expr
-        print("%s[%s, %s] += %s"%(name, maybe_mux(oiv), maybe_mux(ojv), expr))
+        trace("%s[%s, %s] += %s"%(name, maybe_mux(oiv), maybe_mux(ojv), expr))
 
         all_funcs.append(zone_func)
+        all_funcs.append(zone_g)
 
         #if name == 'g_pairwise_symmetry':
         g_fock_components.append(zone_func)
-        zone_funcs[name] = { "func": zone_func, "zone": zone, "updates": updates, "iters": expanded_iters, "rdom": r, "unroll": ru }
+        zone_funcs[name] = { "func": zone_func, "g": zone_g, "zone": zone, "updates": updates, "iters": expanded_iters, "rdom": r, "unroll": ru }
 
     expr = None
     for zone in g_fock_components:
@@ -645,64 +653,53 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
     rv[0] *= hl.f64(0.5)
 
 
-
     # scheduling
 
+    io, jo, ko, lo = [ hl.Var(c+"o") for c in "ijkl" ] # block outer variables
+    outer_vars = [ io, jo, ko, lo ]
+    ii, ji, ki, li = [ hl.Var(c+"i") for c in "ijkl" ] # block inner variables
+    inner_vars = [ ii, ji, ki, li ]
+    gio, gjo, gko, glo = [ hl.RVar("g"+c+"o") for c in "ijkl" ] # block outer reduction variables
+    outer_rvars = [ gio, gjo, gko, glo ]
+    gii, gji, gki, gli = [ hl.RVar("g"+c+"i") for c in "ijkl" ] # block inner reduction variables
+    inner_rvars = [ gii, gji, gki, gli ]
+    jii = hl.Var("jii") # fused i + ji
+    kolo = hl.Var("kolo") # fused ko + lo
+    gkolo = hl.RVar("gkolo") # fused gko + glo
+    ic, jc = hl._0, hl._1 # indexes for clamp funcs
+
     # schedule the pieces of g
-    for clamped_input in [ expnt, rnorm, x, y, z, fm, g_fock_in, g_dens ]:
-        clamped_input.compute_root()
-    for g_precursor_matrix in [ expnt2, fac2, r2, x2, y2, z2 ]:
-        j_i = hl.Var("j_i")
-        j_o = hl.Var("j_o")
-        jii = hl.Var("jii")
-        g_precursor_matrix.compute_root().reorder(i, j).split(j, j_o, j_i, 8).fuse(i, j_i, jii).parallel(j_o).vectorize(jii, 8)
+    for clamped_1d_input in [ expnt, rnorm, x, y, z, fm, g_fock_in, g_dens ]:
+        clamped_1d_input.compute_root().vectorize(ic, vectorsize)
+    for g_precomputed_matrix in [ expnt2, fac2, r2, x2, y2, z2 ]:
+        g_precomputed_matrix.compute_root().vectorize(i, vectorsize)
 
-    # each zone should be one for-loop, and g should be calculated once for each inner loop iteration.
-    # unroll the updates within a zone, parallelize and vectorize as much as possible
-    for zone_name in zone_funcs:
-        record = zone_funcs[zone_name]
-        zone_func = record['func']
-        zone = record['zone']
-        updates = record['updates']
-        expanded_iters = record['iters']
-        r = record['rdom']
-        distinct_iters = [r[i] for i in range(1, len(r))] # skip r[0], the unroll factor
-        ru = record['unroll']
-        gi = expanded_iters['i']
-        gj = expanded_iters['j']
-        gk = expanded_iters['k']
-        gl = expanded_iters['l']
-        first = None
-        print("----")
-        print(zone['name'], "before scheduling")
-        zone_func.print_loop_nest()
+    ex_arg.compute_inline()
+    expnt_inv.compute_inline()
+    for generic_4d_thing in [denom, ex, fac4d, rpq2]:
+        generic_4d_thing.compute_inline()
 
-        # schedule the zone buffer initialization
-        zone_func.compute_root().parallel(j).vectorize(i, 8)
-        # schedule the actual work
-        print("zone_func:", zone_func)
-        print("distinct_iters:", distinct_iters)
-        zone_update = zone_func.update(0)
-        innermost = distinct_iters[0]
-        outermost = distinct_iters[-1]
-        zone_update.reorder(*distinct_iters).unroll(ru).atomic()#.vectorize(innermost, 8)
-        if len(distinct_iters) > 1:
-            zone_update.parallel(outermost)
+    for zone_name, zone_record in zone_funcs.items():
+        func  = zone_record['func']
+        ru    = zone_record['unroll']
+        iters = zone_record['iters']
+        g     = zone_record['g']
+        gi    = iters['i']
+        r     = zone_record['rdom']
+        riter = [r[i] for i in range(1, len(r))] # skip r[0], the unroll factor
+        rinner = riter[0]
+        router = riter[-1]
+        func.compute_root().parallel(j).vectorize(i, vectorsize)
+        func.update(0).dump_argument_list()
+        if len(riter) == 4:
+            ri, rj, rk, rl = riter
+            g.in_(func).reorder(i, k, l, j).compute_at(func, ri).store_at(func, rl).vectorize(i, vectorsize)
+            func_intm = func.update(0).atomic().reorder(ru, ri, rk, rl, rj).unroll(ru).vectorize(ri, vectorsize).parallel(rj) # needs .atomic() or .allow_race_conditions()
+        else:
+            func_intm = func.update(0).atomic().unroll(ru).vectorize(rinner, vectorsize).parallel(router) # needs .atomic() or .allow_race_conditions()
+        #func.print_loop_nest()
 
-        print(zone['name'], "after scheduling")
-        zone_func.print_loop_nest()
-
-    # schedule the sum
-    # consider parallelizing over wider strips of j
-    g_fock.compute_root().reorder(i, j).parallel(j).vectorize(i, 8)
-    # schedule the copy to output
-    # consider parallelizing over wider strips of j
-    g_fock_out.parallel(j).vectorize(i, 8)
-    # schedule the rv reduction
-    rv_intm = rv.update(0).reorder(r_rv.x, r_rv.y).rfactor([])
-    rv_intm.vectorize(hl.Var.outermost())
-
-    g_fock_out.print_loop_nest()
+    g_fock.compute_root()
 
     # tracing
     if tracing:
@@ -711,9 +708,12 @@ def halide_pipeline(zones, tracing=False, tracing_g=False):
                 func.trace_stores()
             func.trace_loads()
 
-    # code generation
+    # return the pipeline
     p = hl.Pipeline(all_outputs)
+    if not quiet:
+        p.print_loop_nest()
     return p, all_outputs, all_inputs
+
 
 def halide_gen(zones, tracing=True):
     import halide as hl
@@ -723,6 +723,7 @@ def halide_gen(zones, tracing=True):
             hl.Output.c_header: "twoel.h",
             hl.Output.c_source: "twoel.cpp",
             hl.Output.static_library: "twoel.a",
+            hl.Output.stmt: "twoel.stmt",
             hl.Output.stmt_html: "twoel.html",
             # the following outputs are useful for running it from python
             #hl.Output.object: "twoel.o",
@@ -736,5 +737,5 @@ def halide_gen(zones, tracing=True):
 if __name__ == "__main__":
     test_symmetry()
     pipeline, outputs, inputs = halide_gen(zones, tracing=False)
-    print({"outputs": outputs})
-    print({"inputs": inputs})
+    trace({"outputs": outputs})
+    trace({"inputs": inputs})
