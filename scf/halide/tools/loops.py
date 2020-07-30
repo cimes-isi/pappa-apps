@@ -655,6 +655,7 @@ def halide_pipeline(zones, tracing=False, tracing_g=False, tilesize=30, vectorsi
 
     # scheduling
 
+    if_, jf, kf, lf = [ hl.Var(c+"f") for c in "ijkl" ] # rfactor vars
     io, jo, ko, lo = [ hl.Var(c+"o") for c in "ijkl" ] # block outer variables
     outer_vars = [ io, jo, ko, lo ]
     ii, ji, ki, li = [ hl.Var(c+"i") for c in "ijkl" ] # block inner variables
@@ -681,7 +682,7 @@ def halide_pipeline(zones, tracing=False, tracing_g=False, tilesize=30, vectorsi
 
     for zone_name, zone_record in zone_funcs.items():
         func  = zone_record['func']
-        ru    = zone_record['unroll']
+        ur    = zone_record['unroll']
         iters = zone_record['iters']
         g     = zone_record['g']
         gi    = iters['i']
@@ -690,14 +691,17 @@ def halide_pipeline(zones, tracing=False, tracing_g=False, tilesize=30, vectorsi
         rinner = riter[0]
         router = riter[-1]
         func.compute_root().parallel(j).vectorize(i, vectorsize)
-        func.update(0).dump_argument_list()
+        func.update().dump_argument_list()
         if len(riter) == 4:
-            ri, rj, rk, rl = riter
-            g.in_(func).reorder(i, k, l, j).compute_at(func, ri).store_at(func, rl).vectorize(i, vectorsize)
-            func_intm = func.update(0).atomic().reorder(ru, ri, rk, rl, rj).unroll(ru).vectorize(ri, vectorsize).parallel(rj) # needs .atomic() or .allow_race_conditions()
+            ir, jr, kr, lr = riter
+            func.update().reorder(ur, ir, kr, lr, jr).unroll(ur)
+            func_intm = func.update().rfactor([[jr, jf], [ir, if_]])
+            func_intm.compute_root().update().reorder(ur, if_, kr, lr, jf).unroll(ur).vectorize(if_, vectorsize).parallel(jf)
+            func.update().atomic().vectorize(ir, vectorsize)
+            #g.in_(func_intm).reorder(i, k, l, j).compute_at(func_intm, if_).store_at(func_intm, lr).vectorize(i, vectorsize)
         else:
-            func_intm = func.update(0).atomic().unroll(ru).vectorize(rinner, vectorsize).parallel(router) # needs .atomic() or .allow_race_conditions()
-        #func.print_loop_nest()
+            func.update().atomic().unroll(ur).vectorize(rinner, vectorsize).parallel(router, 8) # needs .atomic() or .allow_race_conditions() or .rfactor()
+        func.print_loop_nest()
 
     g_fock.compute_root()
 

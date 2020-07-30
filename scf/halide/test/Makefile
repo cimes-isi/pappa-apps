@@ -6,7 +6,7 @@ CXXLINK=-ldl -lpthread
 
 THREADS=1
 TILE_SIZE=15
-VECTOR_SIZE=2
+VECTOR_SIZE=4
 DATA_SIZE=120
 PERF_FUNCS=4D_ij_low_kl_low_pairs_low
 PERF_FUNCS=all
