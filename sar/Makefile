@@ -1,6 +1,24 @@
 run: venv/stamp
 	. venv/bin/activate && cd original/examples && time python3 AutoFocus_demo.py --batch
 
+run-ffbp: venv/stamp
+	. venv/bin/activate && cd original/examples && time python3 FFBP_demo.py --batch
+
+run-ffbpmp: venv/stamp
+	. venv/bin/activate && cd original/examples && time python3 FFBPmp_demo.py --batch
+
+run-ffbpmpi: venv/stamp
+	. venv/bin/activate && cd original/examples && time mpirun -n 4 python3 FFBPmpi_demo.py --batch
+
+run-ffbpmpi-sq: venv/stamp
+	. venv/bin/activate && cd original/examples && time mpirun -n 4 python3 FFBPmpi_sq_demo.py --batch
+
+run-ffbpmpi-sq-opt: venv/stamp
+	. venv/bin/activate && cd original/examples && time mpirun -n 4 python3 FFBPmpi_sq_opt_demo.py --batch
+
+run-ffbpmpi-row-opt: venv/stamp
+	. venv/bin/activate && cd original/examples && time mpirun -n 4 python3 FFBPmpi_row_opt_demo.py --batch
+
 # set up python virtual environment
 venv/stamp:
 	python3 -m virtualenv -p python3 venv
