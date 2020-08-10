@@ -9,6 +9,7 @@ from . import signal as sig
 from . import phsTools
 from scipy.interpolate import interp1d
 import multiprocessing as mp
+import math
 from mpi4py import MPI
 
 def phs_inscribe(img):
@@ -952,6 +953,145 @@ def FFBPmpi(phs, platform, img_plane, N=3, derate = 1.05, taylor = 20, n = 32, b
     #Derive parameters
     full_size = np.array([v.size, u.size], dtype = np.int)
     sub_size = np.array(full_size/2, dtype = int)
+    img_FFBP = np.zeros(full_size)
+
+    print('processing %i sub images, please wait...'%(n_img))
+    #Break image into sub images (get sub_image indices)
+    img_FFBP = np.zeros([v.size, u.size])+0j
+    for image_number in range(n_img):
+        print('creating sub-image %i of %i'%((image_number+1), n_img))
+        i,j = img_planeDS_list[image_number]['index']
+
+        #update img_plane['u','v']
+        r = np.arange(sub_size[0]*i, sub_size[0]*(i+1))
+        c = np.arange(sub_size[1]*j, sub_size[1]*(j+1))
+        cc,rr = np.meshgrid(c,r)
+
+        #Insert insert sub images into full image
+        img_FFBP[rr, cc] = output[image_number]
+
+    return(img_FFBP)
+
+
+def FFBPmpi_sq(phs, platform, img_plane, N=3, derate = 1.05, taylor = 20, n = 32, beta = 4, cutoff = 'nyq', factor_max = 2, factor_min = 0):
+##############################################################################
+#                                                                            #
+#  This is the Fast Factorized Backprojection Algorithm with                 #
+#  MPI parallelism.  Processing begins with breaking the image up into 4     #
+#  sub images using the digital spotlight algorithm and forcing the          #
+#  factorization factor to 1.  The multiprocessing library is then used to   #
+#  create 4 processes.  For each process, the sub images are generated using #
+#  the factorized backprojection algorithm.  It is extremely import that     #
+#  this function is only run from a .py script and the first line of that    #
+#  script contains the statement "if __name__ == "__main__": immediately     #
+#  after all import statements.  Reference the FFBPmp demo for more details. #
+#                                                                            #
+##############################################################################
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    ranks = comm.Get_size()
+    root = int(math.sqrt(ranks) + 0.5)
+    if root ** 2 != ranks:
+        print('Number of ranks must be a perfect square')
+        exit(1)
+
+    #add sub_image_index key to img_plane
+    img_plane['index'] = np.array([0,0])
+
+    #create parent containers
+    phsDS_list          = tuple([phs])
+    platformDS_list     = tuple([platform])
+    img_planeDS_list    = tuple([img_plane])
+
+    #Begin factorization
+    #create temporary child containers
+    phsDS_list_tmp      = []
+    platformDS_list_tmp = []
+    img_planeDS_list_tmp= [];
+
+    #Retrieve relevent parameters
+    u        = img_plane['u']
+    v        = img_plane['v']
+    pos      = img_plane['pixel_locs']
+    index    = img_plane['index']*2
+
+    #Derive parameters
+    rows = root
+    cols = root
+    img_plane_sub = dict(img_plane)
+    full_size = np.array([v.size, u.size], dtype = np.int)
+    sub_size = np.array(full_size/rows, dtype = int) # assumes rows==cols
+    img_FFBP = np.zeros(full_size)
+
+    #For each pixel, assign a position index
+    pos_array = np.arange(len(pos[0,]))
+    pos_array = np.reshape(pos_array, full_size)[::-1]
+
+    print('creating %i sub images and assigning them to %i processes'%(ranks, ranks))
+    #Break image into sub images (get sub_image indices)
+    img_FFBP = np.zeros(full_size)+0j
+    for k in range(rows):
+        for l in range(cols):
+            #update img_plane['u','v']
+            r = np.arange(sub_size[0]*k, sub_size[0]*(k+1))[::-1]
+            c = np.arange(sub_size[1]*l, sub_size[1]*(l+1))
+            img_plane_sub['u'] = u[c]
+            img_plane_sub['v'] = v[r]
+            cc,rr = np.meshgrid(c,r)
+
+            #Get pixel_locs for each sub image
+            pos_index = pos_array[rr,cc].flatten()
+            img_plane_sub['pixel_locs']=\
+                pos[:,pos_index]
+
+            #digitally spotlight data data
+            tmp = DS(phs, platform, img_plane_sub,
+                derate = derate, taylor=17, n = n, beta = beta, cutoff = cutoff, factor_max = 1, factor_min = 1)
+
+            #update sub_image index
+            tmp[2]['index'] = index + [k,l]
+
+            phsDS_list_tmp.append(tmp[0])
+            platformDS_list_tmp.append(tmp[1])
+            img_planeDS_list_tmp.append(tmp[2])
+
+    #replace parent containers with child containers
+    phsDS_list          = tuple(phsDS_list_tmp)
+    platformDS_list     = tuple(platformDS_list_tmp)
+    img_planeDS_list    = tuple(img_planeDS_list_tmp)
+
+    #backproject factorized data
+    #####################################################
+
+    #Retrieve relevent parameters
+    u        = img_plane['u']
+    v        = img_plane['v']
+    pos      = img_plane['pixel_locs']
+
+    #Determine number of image patches
+    # n_img = 4
+    n_img = comm.Get_size()
+
+    # process sub image
+    i = rank
+    result = FFBP(phsDS_list[i], platformDS_list[i], img_planeDS_list[i],
+                  N-1, derate, taylor, n, beta, cutoff, factor_max, factor_min, False)
+
+    if rank > 0:
+        print('sending to rank 0')
+        comm.send(result, dest=0)
+        return []
+
+    output = [result]
+    for p in range(1, n_img):
+        print('receiving from rank %i'%(p))
+        # result = np.empty()
+        result = comm.recv(source=p)
+        output.append(result)
+
+    #Derive parameters
+    full_size = np.array([v.size, u.size], dtype = np.int)
+    sub_size = np.array(full_size/rows, dtype = int) # assumes rows==cols
     img_FFBP = np.zeros(full_size)
 
     print('processing %i sub images, please wait...'%(n_img))
