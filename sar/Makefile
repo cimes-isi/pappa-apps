@@ -19,6 +19,9 @@ run-ffbpmpi-sq-opt: venv/stamp
 run-ffbpmpi-row-opt: venv/stamp
 	. venv/bin/activate && cd original/examples && time mpirun -n 4 python3 FFBPmpi_row_opt_demo.py --batch
 
+exp-afrl: venv/stamp
+	. venv/bin/activate && cd original/examples && python3 AFRL_export.py --batch
+
 # set up python virtual environment
 venv/stamp:
 	python3 -m virtualenv -p python3 venv
