@@ -9,6 +9,7 @@ from SARplatform import plat_dict
 
 #Include SARIT toolset
 from ritsar import phsRead
+from ritsar import imgTools
 
 import numpy as np
 
@@ -26,11 +27,13 @@ if __name__ == '__main__':
 
     #Import phase history and create platform dictionary
     [phs, platform] = phsRead.AFRL(directory, pol, start_az, n_az = 4)
+    print('--PHS--')
     print('phs: ' + str(type(phs)))
     print('phs[0]: ' + str(type(phs[0])))
     print('phs[0][0]: ' + str(type(phs[0][0])))
     np.save('HH_npy/phs.npy', phs)
     np.savetxt('HH_npy_txt/phs.npy', phs, fmt='%0.5f')
+    print('--PLATFORM--')
     for k in platform:
         print(str(k) + ': ' + str(type(platform[k])))
         print(str(k) + '[0]: ' + str(type(np.atleast_1d(platform[k])[0])))
@@ -38,3 +41,17 @@ if __name__ == '__main__':
             print(str(k) + '[0][0]: ' + str(type(np.atleast_1d(platform[k])[0][0])))
         np.save('HH_npy/' + str(k) + '.npy', np.atleast_1d(platform[k]))
         np.savetxt('HH_npy_txt/' + str(k) + '.npy', np.atleast_1d(platform[k]), fmt='%0.5f')
+
+    os.mkdir('HH_ip_npy')
+    os.mkdir('HH_ip_npy_txt')
+
+    img_plane = imgTools.img_plane_dict(platform, res_factor = 1.0, upsample = True, aspect = 1.0)
+    print('--IMG_PLANE--')
+    for k in img_plane:
+        print(str(k) + ': ' + str(type(img_plane[k])))
+        print(str(k) + '[0]: ' + str(type(np.atleast_1d(img_plane[k])[0])))
+        if str(k) == 'pixel_locs':
+            print(str(k) + '[0][0]: ' + str(type(np.atleast_1d(img_plane[k])[0][0])))
+        np.save('HH_ip_npy/' + str(k) + '.npy', np.atleast_1d(img_plane[k]))
+        np.savetxt('HH_ip_npy_txt/' + str(k) + '.npy', np.atleast_1d(img_plane[k]), fmt='%0.5f')
+
