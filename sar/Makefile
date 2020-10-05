@@ -1,6 +1,9 @@
 run: venv/stamp
 	. venv/bin/activate && cd original/examples && time python3 AutoFocus_demo.py --batch
 
+run-bp: venv/stamp
+	. venv/bin/activate && cd original/examples && time python3 BP_demo.py --batch
+
 run-ffbp: venv/stamp
 	. venv/bin/activate && cd original/examples && time python3 FFBP_demo.py --batch
 
