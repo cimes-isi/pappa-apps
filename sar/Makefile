@@ -26,7 +26,7 @@ exp-afrl: venv/stamp
 	. venv/bin/activate && cd original/examples && python3 AFRL_export.py --batch
 
 # set up python virtual environment
-venv/stamp:
+venv/stamp: requirements.txt
 	python3 -m virtualenv -p python3 venv
 	. venv/bin/activate && pip3 install -r requirements.txt
 	touch venv/stamp

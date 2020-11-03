@@ -1,3 +1,4 @@
 scipy
+spectral
 matplotlib
 mpi4py
