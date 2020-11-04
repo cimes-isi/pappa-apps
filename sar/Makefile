@@ -25,6 +25,9 @@ run-ffbpmpi-row-opt: venv/stamp
 exp-afrl: venv/stamp
 	. venv/bin/activate && cd original/examples && python3 AFRL_export.py --batch
 
+exp-dirsig: venv/stamp
+	. venv/bin/activate && cd original/examples && python3 DIRSIG_export.py --batch
+
 exp-sandia: venv/stamp
 	. venv/bin/activate && cd original/examples && python3 Sandia_export.py --batch
 
