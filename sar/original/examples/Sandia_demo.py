@@ -36,10 +36,11 @@ img_plane = imgTools.img_plane_dict(platform,
 
 #Apply polar format algorithm to phase history data
 #(Other options not available since platform position is unknown)
-img_pf = imgTools.polar_format(phs_corr, platform, img_plane, taylor = 30)
+#img_pf = imgTools.polar_format(phs_corr, platform, img_plane, taylor = 30)
+img_bp = imgTools.backprojection(phs_corr, platform, img_plane, taylor = 30, upsample=2)
 
 #Output image
-imgTools.imshow(img_pf, [-45,0])
+imgTools.imshow(img_bp, [-45,0])
 if batch:
     plt.savefig("Sandia_demo.png")
 else:
